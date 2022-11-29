@@ -74,7 +74,7 @@ RWS is using [websocketpp](https://github.com/zaphoyd/websocketpp), [asio](https
 
 # Motivation behind RWS
 In my experiece, Rosbridge does not work well with the second version of ROS. Seems like Rosbridge developers mainly focused on ROS1 support, and ROS2 is handled on a best effort basis(for example, check [this issue](https://github.com/RobotWebTools/rosbridge_suite/issues/744)). I'm experiencing severe memory leaks(~1 GB of memory per day), high CPU usage, on a device like Raspberry Pi it's a problem. It's also not very stable and sometimes crashes if multiple clients reconnect rapidly.
-My first intention was to fix ROS2 support in Rosbridge. I started by collecting all non-merged fixes from other people and trying to add my own, some progress was made, but the server was still CPU hungry(even though less leaky and more stable), so I decided that C++ is more appropriate than Pyton, for this kind of task.
+My first intention was to fix ROS2 support in Rosbridge. I started by collecting all non-merged fixes from other people and trying to add my own, some progress was made, but the server was still CPU hungry(even though less leaky and more stable), so I decided that C++ is more appropriate than Python, for this kind of task.
 
 ### Performance
 Here is the data from `htop` command output from a Raspberry Pi 4B(4GB version) running the following stack:
