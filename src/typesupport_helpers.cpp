@@ -15,6 +15,7 @@
 #include "rws/typesupport_helpers.hpp"
 
 #include <mutex>
+#include <vector>
 
 #include "ament_index_cpp/get_package_prefix.hpp"
 #include "ament_index_cpp/get_resources.hpp"
@@ -192,13 +193,28 @@ std::shared_ptr<void> allocate_message(const MessageMembers * members)
     const auto member = members->members_ + i;
 
     if (member->type_id_ == rosidl_typesupport_introspection_cpp::ROS_TYPE_STRING) {
-      std::string * sp = reinterpret_cast<std::string *>(buf + member->offset_);
-      memcpy(buf + member->offset_, new std::string(str), sizeof(std::string));
+      if (member->is_array_) {
+        std::vector<std::string> * vp =
+          reinterpret_cast<std::vector<std::string> *>(buf + member->offset_);
+        memcpy(
+          buf + member->offset_, new std::vector<std::string>(), sizeof(std::vector<std::string>));
+      } else {
+        std::string * sp = reinterpret_cast<std::string *>(buf + member->offset_);
+        memcpy(buf + member->offset_, new std::string(str), sizeof(std::string));
+      }
     }
 
     if (member->type_id_ == rosidl_typesupport_introspection_cpp::ROS_TYPE_WSTRING) {
-      std::wstring * sp = reinterpret_cast<std::wstring *>(buf + member->offset_);
-      memcpy(buf + member->offset_, new std::wstring(wstr), sizeof(std::wstring));
+      if (member->is_array_) {
+        std::vector<std::wstring> * vp =
+          reinterpret_cast<std::vector<std::wstring> *>(buf + member->offset_);
+        memcpy(
+          buf + member->offset_, new std::vector<std::wstring>(),
+          sizeof(std::vector<std::wstring>));
+      } else {
+        std::wstring * sp = reinterpret_cast<std::wstring *>(buf + member->offset_);
+        memcpy(buf + member->offset_, new std::wstring(wstr), sizeof(std::wstring));
+      }
     }
   }
 
