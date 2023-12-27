@@ -18,6 +18,7 @@
 #include <inttypes.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdexcept>
 
 #include <array>
 #include <cassert>
