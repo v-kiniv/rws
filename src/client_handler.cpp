@@ -311,7 +311,7 @@ bool ClientHandler::call_service(const json & msg, json & response)
   }
   std::string service = msg["service"];
 
-  response["op"] = "service_response";
+  response["op"] = "call_service";
   response["service"] = service;
   response["result"] = false;
 
@@ -430,12 +430,13 @@ bool ClientHandler::call_external_service(const json & msg, json & response)
 
   auto serialized_req = json_to_serialized_service_request(service_type, msg["args"]);
   using ServiceResponseFuture = rws::GenericClient::SharedFuture;
-  auto response_received_callback = [this, id = msg["id"],
+  auto response_received_callback = [this, id = msg["id"], service_name,
                                      service_type](ServiceResponseFuture future) {
     json response_json = serialized_service_response_to_json(service_type, future.get());
     json m = {
       {"id", id},
       {"op", "service_response"},
+      {"service", service_name},
       {"values", response_json},
       {"result", true},
     };
