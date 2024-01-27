@@ -311,7 +311,7 @@ bool ClientHandler::call_service(const json & msg, json & response)
   }
   std::string service = msg["service"];
 
-  response["op"] = "call_service";
+  response["op"] = "service_response";
   response["service"] = service;
   response["result"] = false;
 
@@ -446,6 +446,7 @@ bool ClientHandler::call_external_service(const json & msg, json & response)
   };
   clients_[service_type]->async_send_request(serialized_req, response_received_callback);
 
+  response["op"] = "call_service";
   response["result"] = true;
   return true;
 }
