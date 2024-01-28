@@ -414,12 +414,12 @@ bool ClientHandler::call_external_service(const json & msg, json & response)
     return false;
   }
 
-  if (clients_.count(service_type) == 0) {
-    clients_[service_type] = node_->create_generic_client(
+  if (clients_.count(service_name) == 0) {
+    clients_[service_name] = node_->create_generic_client(
       service_name, service_type, rmw_qos_profile_services_default, nullptr);
   }
 
-  while (!clients_[service_type]->wait_for_service(1s)) {
+  while (!clients_[service_name]->wait_for_service(1s)) {
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(get_logger(), "Interrupted while waiting for the service. Exiting.");
       response["result"] = false;
@@ -444,7 +444,7 @@ bool ClientHandler::call_external_service(const json & msg, json & response)
     std::string json_str = m.dump();
     this->send_message(json_str);
   };
-  clients_[service_type]->async_send_request(serialized_req, response_received_callback);
+  clients_[service_name]->async_send_request(serialized_req, response_received_callback);
 
   response["op"] = "call_service";
   response["result"] = true;
