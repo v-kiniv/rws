@@ -414,12 +414,12 @@ bool ClientHandler::call_external_service(const json & msg, json & response)
     return false;
   }
 
-  if (clients_.count(service_type) == 0) {
-    clients_[service_type] = node_->create_generic_client(
+  if (clients_.count(service_name) == 0) {
+    clients_[service_name] = node_->create_generic_client(
       service_name, service_type, rmw_qos_profile_services_default, nullptr);
   }
 
-  while (!clients_[service_type]->wait_for_service(1s)) {
+  while (!clients_[service_name]->wait_for_service(1s)) {
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(get_logger(), "Interrupted while waiting for the service. Exiting.");
       response["result"] = false;
@@ -430,12 +430,13 @@ bool ClientHandler::call_external_service(const json & msg, json & response)
 
   auto serialized_req = json_to_serialized_service_request(service_type, msg["args"]);
   using ServiceResponseFuture = rws::GenericClient::SharedFuture;
-  auto response_received_callback = [this, id = msg["id"],
+  auto response_received_callback = [this, id = msg["id"], service_name,
                                      service_type](ServiceResponseFuture future) {
     json response_json = serialized_service_response_to_json(service_type, future.get());
     json m = {
       {"id", id},
       {"op", "service_response"},
+      {"service", service_name},
       {"values", response_json},
       {"result", true},
     };
@@ -443,8 +444,9 @@ bool ClientHandler::call_external_service(const json & msg, json & response)
     std::string json_str = m.dump();
     this->send_message(json_str);
   };
-  clients_[service_type]->async_send_request(serialized_req, response_received_callback);
+  clients_[service_name]->async_send_request(serialized_req, response_received_callback);
 
+  response["op"] = "call_service";
   response["result"] = true;
   return true;
 }

@@ -52,10 +52,16 @@ public:
   {
     auto matching_subscriber = get_subscriber_by_params(params);
     subscriber_handle handle = {nullptr, params, handler, client_id, next_handler_id_++};
+    rclcpp::QoS qos(params.history_depth);
+    auto info = node_->get_publishers_info_by_topic(params.topic);
+    for(const auto& node : info)
+    {
+      qos.durability(node.qos_profile().get_rmw_qos_profile().durability);
+    }
 
     if (matching_subscriber == nullptr) {
       handle.subscription = node_->create_generic_subscription(
-        params.topic, params.type, rclcpp::QoS(params.history_depth),
+        params.topic, params.type, qos,
         [this, params](std::shared_ptr<const rclcpp::SerializedMessage> message) {
           for (auto & sub : subscribers_) {
             if (sub.params == params) {

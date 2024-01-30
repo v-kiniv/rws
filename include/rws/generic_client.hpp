@@ -15,6 +15,7 @@
 #ifndef RWS__GENERIC_CLIENT_HPP_
 #define RWS__GENERIC_CLIENT_HPP_
 
+#include <cstring>
 #include "rclcpp/client.hpp"
 #include "rclcpp/expand_topic_or_service_name.hpp"
 #include "rclcpp/serialized_message.hpp"
@@ -139,10 +140,17 @@ public:
     int64_t sequence_number;
 
     auto srv_members = static_cast<const ServiceMembers *>(srv_ts_hdl_->data);
-    auto buf = allocate_message(srv_members->request_members_);
+    auto req_members = srv_members->request_members_;
+    auto buf = allocate_message(req_members);
 
-    const rmw_serialized_message_t * sm = &request->get_rcl_serialized_message();
-    rmw_deserialize(sm, req_ts_hdl_, buf.get());
+    if(req_members->member_count_ > 1 ||
+       std::strcmp(req_members->members_[0].name_, "structure_needs_at_least_one_member") != 0) {
+      const rmw_serialized_message_t * sm = &request->get_rcl_serialized_message();
+      rmw_ret_t rmw_ret = rmw_deserialize(sm, req_ts_hdl_, buf.get());
+      if(RMW_RET_OK != rmw_ret) {
+        rclcpp::exceptions::throw_from_rcl_error(rmw_ret, "failed to deserialize request");
+      }
+    }
 
     rcl_ret_t ret = rcl_send_request(get_client_handle().get(), buf.get(), &sequence_number);
     if (RCL_RET_OK != ret) {
