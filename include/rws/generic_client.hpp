@@ -15,6 +15,7 @@
 #ifndef RWS__GENERIC_CLIENT_HPP_
 #define RWS__GENERIC_CLIENT_HPP_
 
+#include <cstring>
 #include "rclcpp/client.hpp"
 #include "rclcpp/expand_topic_or_service_name.hpp"
 #include "rclcpp/serialized_message.hpp"
