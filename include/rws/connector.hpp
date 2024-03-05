@@ -58,8 +58,9 @@ public:
     {
       qos.durability(node.qos_profile().get_rmw_qos_profile().durability);
     }
+    bool is_transient_local = qos.durability() == rclcpp::DurabilityPolicy::TransientLocal;
 
-    if (matching_subscriber == nullptr) {
+    if (matching_subscriber == nullptr || is_transient_local) {
       handle.subscription = node_->create_generic_subscription(
         params.topic, params.type, qos,
         [this, params](std::shared_ptr<const rclcpp::SerializedMessage> message) {
