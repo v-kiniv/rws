@@ -71,7 +71,6 @@ static void serialized_message_to_json(cycdeser & deser, const MessageMembers * 
         break;
 
       case rosidl_typesupport_introspection_cpp::ROS_TYPE_CHAR:
-      case rosidl_typesupport_introspection_cpp::ROS_TYPE_INT8:
         deserialize_field<char>(deser, member, j[member->name_]);
         break;
 
@@ -81,6 +80,10 @@ static void serialized_message_to_json(cycdeser & deser, const MessageMembers * 
 
       case rosidl_typesupport_introspection_cpp::ROS_TYPE_FLOAT64:
         deserialize_field<double>(deser, member, j[member->name_]);
+        break;
+
+      case rosidl_typesupport_introspection_cpp::ROS_TYPE_INT8:
+        deserialize_field<int8_t>(deser, member, j[member->name_]);
         break;
 
       case rosidl_typesupport_introspection_cpp::ROS_TYPE_INT16:
@@ -206,7 +209,6 @@ static void json_to_serialized_message(cycser & ser, const MessageMembers * memb
         serialize_field<uint8_t>(member, field, ser, 0);
         break;
       case rosidl_typesupport_introspection_cpp::ROS_TYPE_CHAR:
-      case rosidl_typesupport_introspection_cpp::ROS_TYPE_INT8:
         serialize_field<char>(member, field, ser, 0);
         break;
       case rosidl_typesupport_introspection_cpp::ROS_TYPE_FLOAT32:
@@ -214,6 +216,9 @@ static void json_to_serialized_message(cycser & ser, const MessageMembers * memb
         break;
       case rosidl_typesupport_introspection_cpp::ROS_TYPE_FLOAT64:
         serialize_field<double>(member, field, ser, 0.0);
+        break;
+      case rosidl_typesupport_introspection_cpp::ROS_TYPE_INT8:
+        serialize_field<int8_t>(member, field, ser, 0);
         break;
       case rosidl_typesupport_introspection_cpp::ROS_TYPE_INT16:
         serialize_field<int16_t>(member, field, ser, 0);
