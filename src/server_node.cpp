@@ -317,6 +317,11 @@ private:
 
   void on_pong_timeout(connection_hdl hdl)
   {
+    if(hdl.expired() || get_con_data(hdl) == nullptr) {
+      // TCP connection dropped before timeout and the client is already disposed
+      return;
+    }
+
     RCLCPP_WARN(get_logger(), "Pong timeout");
     {
       std::lock_guard<std::mutex> guard(action_lock_);
