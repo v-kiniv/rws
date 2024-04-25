@@ -371,7 +371,8 @@ bool ClientHandler::call_service(const json & msg, json & response)
       auto subscribers = node_->get_subscriptions_info_by_topic(it->first);
       for (auto sub_it = subscribers.begin(); sub_it != subscribers.end(); ++sub_it) {
         std::string sub_node = sub_it->node_name();
-        if (sub_node == node_name) {
+        std::string sub_ns = sub_it->node_namespace() == "/" ? "" : sub_it->node_namespace();
+        if (sub_ns + sub_node == ns + node_name) {
           response["values"]["subscribing"].push_back(it->first);
         }
       }
@@ -379,7 +380,8 @@ bool ClientHandler::call_service(const json & msg, json & response)
       auto publishers = node_->get_publishers_info_by_topic(it->first);
       for (auto pub_it = publishers.begin(); pub_it != publishers.end(); ++pub_it) {
         std::string pub_node = pub_it->node_name();
-        if (pub_node == node_name) {
+        std::string pub_ns = pub_it->node_namespace() == "/" ? "" : pub_it->node_namespace();
+        if (pub_ns + pub_node == ns + node_name) {
           response["values"]["publishing"].push_back(it->first);
         }
       }
@@ -394,6 +396,42 @@ bool ClientHandler::call_service(const json & msg, json & response)
       RCLCPP_ERROR(
         get_logger(), "Exception while fetching services for node(%s), ns=%s, name=%s: %s",
         msg["args"]["node"].get<std::string>().c_str(), ns.c_str(), node_name.c_str(), e.what());
+    }
+
+    response["result"] = true;
+    return true;
+  }
+
+  if (service == "/rosapi/topic_type") {
+    std::string topic_name = msg["args"]["topic"].get<std::string>();
+    std::map<std::string, std::vector<std::string>> topics = node_->get_topic_names_and_types(); 
+    if (topics.find(topic_name) == topics.end()) {
+      RCLCPP_ERROR(get_logger(), "Topic not found: %s", topic_name.c_str());
+      return true;
+    }
+
+    response["values"]["type"] = topics[topic_name][0];
+    response["result"] = true;
+    return true;
+  }
+
+  if (service == "/rosapi/services_for_type") {
+    std::string service_type = msg["args"]["type"].get<std::string>();
+    auto service_name_and_types = node_->get_service_names_and_types();
+
+    std::map<std::string, std::vector<std::string>> filtered_service_name_and_types;
+    for (const auto &pair : service_name_and_types) {
+      for (const auto &type : pair.second) {
+        if (type == service_type) {
+          filtered_service_name_and_types.insert(pair);
+          break;
+        }
+      }
+    }
+
+    response["values"]["services"] = json::array();
+    for (auto it = filtered_service_name_and_types.begin(); it != filtered_service_name_and_types.end(); ++it) {
+      response["values"]["services"].push_back(it->first);
     }
 
     response["result"] = true;
