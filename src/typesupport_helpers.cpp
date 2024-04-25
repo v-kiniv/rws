@@ -176,13 +176,13 @@ std::shared_ptr<void> allocate_message(const MessageMembers * members)
 {
   std::string str;
   size_t str_capacity = str.capacity();
-  for (int i = 0; i < str_capacity + 1; i++) {
+  for (size_t i = 0; i < str_capacity + 1; i++) {
     str += "a";
   }
 
   std::wstring wstr;
   size_t wstr_capacity = wstr.capacity();
-  for (int i = 0; i < wstr_capacity + 1; i++) {
+  for (size_t i = 0; i < wstr_capacity + 1; i++) {
     wstr += L"a";
   }
 
@@ -194,25 +194,19 @@ std::shared_ptr<void> allocate_message(const MessageMembers * members)
 
     if (member->type_id_ == rosidl_typesupport_introspection_cpp::ROS_TYPE_STRING) {
       if (member->is_array_) {
-        std::vector<std::string> * vp =
-          reinterpret_cast<std::vector<std::string> *>(buf + member->offset_);
         memcpy(
           buf + member->offset_, new std::vector<std::string>(), sizeof(std::vector<std::string>));
       } else {
-        std::string * sp = reinterpret_cast<std::string *>(buf + member->offset_);
         memcpy(buf + member->offset_, new std::string(str), sizeof(std::string));
       }
     }
 
     if (member->type_id_ == rosidl_typesupport_introspection_cpp::ROS_TYPE_WSTRING) {
       if (member->is_array_) {
-        std::vector<std::wstring> * vp =
-          reinterpret_cast<std::vector<std::wstring> *>(buf + member->offset_);
         memcpy(
           buf + member->offset_, new std::vector<std::wstring>(),
           sizeof(std::vector<std::wstring>));
       } else {
-        std::wstring * sp = reinterpret_cast<std::wstring *>(buf + member->offset_);
         memcpy(buf + member->offset_, new std::wstring(wstr), sizeof(std::wstring));
       }
     }

@@ -211,8 +211,8 @@ private:
   std::mutex connection_lock_;
   std::thread server_thread_;
   std::thread processing_thread_;
-  std::shared_ptr<rws::Connector<>> connector_;
   std::shared_ptr<rws::NodeInterfaceImpl> node_interface_;
+  std::shared_ptr<rws::Connector<>> connector_;
 
   connection_data * get_con_data(connection_hdl & hdl)
   {
@@ -345,7 +345,7 @@ private:
 // Declare as global so it's accessible inside the signal handler
 std::shared_ptr<ServerNode> g_server_;
 
-void signal_handler(int sig) { g_server_->shutdown(); }
+void signal_handler(int sig) { (void)sig; g_server_->shutdown(); }
 
 int main(int argc, char * argv[])
 {
