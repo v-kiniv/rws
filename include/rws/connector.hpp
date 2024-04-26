@@ -33,11 +33,11 @@ struct topic_params
     return topic == p.topic && type == p.type && history_depth == p.history_depth &&
            compression == p.compression && latch == p.latch;
   }
-  bool latch;  // only for publishers, rws internal
   size_t history_depth;
   std::string compression;  // rws internal
   std::string topic;
   std::string type;
+  bool latch;  // only for publishers, rws internal
 };
 
 template <class PublisherClass = rclcpp::GenericPublisher>
