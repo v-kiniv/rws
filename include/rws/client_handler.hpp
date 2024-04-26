@@ -39,11 +39,11 @@ public:
 
 private:
   int client_id_;
+  std::shared_ptr<rws::NodeInterface<>> node_;
+  std::shared_ptr<rws::Connector<>> connector_;
   bool rosbridge_compatible_;
   std::function<void(std::string & msg)> callback_;
   std::function<void(std::vector<std::uint8_t> & msg)> binary_callback_;
-  std::shared_ptr<rws::NodeInterface<>> node_;
-  std::shared_ptr<rws::Connector<>> connector_;
 
   std::map<std::string, std::function<void()>> subscriptions_;
   std::map<std::string, std::function<void()>> publishers_;
