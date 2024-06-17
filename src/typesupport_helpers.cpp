@@ -172,8 +172,7 @@ std::string message_type_to_ros1_style(const std::string & ros2_msg_type)
   return s;
 }
 
-std::shared_ptr<void> allocate_message(const MessageMembers * members)
-{
+static void allocate_string_members(const MessageMembers * members, uint8_t * buf) {
   std::string str;
   size_t str_capacity = str.capacity();
   for (size_t i = 0; i < str_capacity + 1; i++) {
@@ -186,9 +185,6 @@ std::shared_ptr<void> allocate_message(const MessageMembers * members)
     wstr += L"a";
   }
 
-  uint8_t * buf = static_cast<uint8_t *>(malloc(members->size_of_ + MSG_MEM_BLOCK_SIZE));
-  memset(buf, 0, MSG_MEM_BLOCK_SIZE);
-
   for (uint32_t i = 0; i < members->member_count_; ++i) {
     const auto member = members->members_ + i;
 
@@ -199,9 +195,7 @@ std::shared_ptr<void> allocate_message(const MessageMembers * members)
       } else {
         memcpy(buf + member->offset_, new std::string(str), sizeof(std::string));
       }
-    }
-
-    if (member->type_id_ == rosidl_typesupport_introspection_cpp::ROS_TYPE_WSTRING) {
+    } else if (member->type_id_ == rosidl_typesupport_introspection_cpp::ROS_TYPE_WSTRING) {
       if (member->is_array_) {
         memcpy(
           buf + member->offset_, new std::vector<std::wstring>(),
@@ -209,8 +203,21 @@ std::shared_ptr<void> allocate_message(const MessageMembers * members)
       } else {
         memcpy(buf + member->offset_, new std::wstring(wstr), sizeof(std::wstring));
       }
+    } else if(member->type_id_ == rosidl_typesupport_introspection_cpp::ROS_TYPE_MESSAGE) {
+      auto sub_members = static_cast<const MessageMembers *>(member->members_->data);
+      if (!member->is_array_) {
+        allocate_string_members(sub_members, buf);
+      }
     }
   }
+}
+
+std::shared_ptr<void> allocate_message(const MessageMembers * members)
+{
+  uint8_t * buf = static_cast<uint8_t *>(malloc(members->size_of_ + MSG_MEM_BLOCK_SIZE));
+  memset(buf, 0, MSG_MEM_BLOCK_SIZE);
+
+  allocate_string_members(members, buf);
 
   return std::shared_ptr<void>(buf);
 }
