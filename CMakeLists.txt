@@ -52,6 +52,7 @@ target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
 
 set(DEPENDENCIES
   rclcpp
+  ament_index_cpp
   CycloneDDS
 )
 
