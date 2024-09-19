@@ -149,7 +149,7 @@ static void serialized_message_to_json(cycdeser & deser, const MessageMembers * 
 json serialized_message_to_json(const std::string & msg_type, ConstSharedMessage msg)
 {
   auto library = rws::get_typesupport_library(msg_type, rws::ts_identifier);
-  auto ts = rclcpp::get_typesupport_handle(msg_type, rws::ts_identifier, *library);
+  auto ts = rclcpp::get_message_typesupport_handle(msg_type, rws::ts_identifier, *library);
   auto members = static_cast<const MessageMembers *>(ts->data);
   auto rcl_msg = &msg->get_rcl_serialized_message();
 
@@ -277,7 +277,7 @@ static void json_to_serialized_message(cycser & ser, const MessageMembers * memb
 SharedMessage json_to_serialized_message(const std::string & msg_type, const json & j)
 {
   auto library = rws::get_typesupport_library(msg_type, rws::ts_identifier);
-  auto ts = rclcpp::get_typesupport_handle(msg_type, rws::ts_identifier, *library);
+  auto ts = rclcpp::get_message_typesupport_handle(msg_type, rws::ts_identifier, *library);
   auto members = static_cast<const MessageMembers *>(ts->data);
 
   auto msg = std::make_shared<rclcpp::SerializedMessage>(0);
@@ -419,7 +419,7 @@ static std::string members_to_meta(
 std::string generate_message_meta(const std::string & msg_type, bool rosbridge_compatible)
 {
   auto library = rws::get_typesupport_library(msg_type, rws::ts_identifier);
-  auto ts = rclcpp::get_typesupport_handle(msg_type, rws::ts_identifier, *library);
+  auto ts = rclcpp::get_message_typesupport_handle(msg_type, rws::ts_identifier, *library);
   auto members = static_cast<const MessageMembers *>(ts->data);
 
   std::stringstream s;
