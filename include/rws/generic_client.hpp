@@ -62,12 +62,12 @@ public:
     auto request_members = srv_members->request_members_;
     auto request_type = get_type_from_message_members(request_members);
     req_ts_lib_ = rclcpp::get_typesupport_library(request_type, rws::ts_identifier);
-    req_ts_hdl_ = rclcpp::get_typesupport_handle(request_type, rws::ts_identifier, *req_ts_lib_);
+    req_ts_hdl_ = rclcpp::get_message_typesupport_handle(request_type, rws::ts_identifier, *req_ts_lib_);
 
     auto response_members = srv_members->response_members_;
     auto response_type = get_type_from_message_members(response_members);
     res_ts_lib_ = rclcpp::get_typesupport_library(response_type, rws::ts_identifier);
-    res_ts_hdl_ = rclcpp::get_typesupport_handle(response_type, rws::ts_identifier, *res_ts_lib_);
+    res_ts_hdl_ = rclcpp::get_message_typesupport_handle(response_type, rws::ts_identifier, *res_ts_lib_);
 
     rcl_ret_t ret = rcl_client_init(
       this->get_client_handle().get(), this->get_rcl_node_handle(), srv_ts_hdl_,

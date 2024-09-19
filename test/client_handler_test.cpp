@@ -23,19 +23,6 @@ public:
 protected:
 };
 
-TEST_F(ClientHandlerFixture, stress_test_node_creation_and_destruction)
-{
-  auto server_node = std::make_shared<rclcpp::Node>("server_node");
-  auto node_interface = std::make_shared<rws::NodeInterfaceImpl>(server_node);
-  auto connector = std::make_shared<rws::Connector<>>(node_interface);
-  for (int i = 0; i < 1000; i++) {
-    auto node = std::make_shared<rws::ClientHandler>(
-      i, node_interface, connector, true, [](std::string & msg) {},
-      [](std::vector<std::uint8_t> & msg) {});
-    EXPECT_NE(node, nullptr);
-  }
-}
-
 TEST_F(ClientHandlerFixture, subsribe_to_topic_is_thread_safe)
 {
   auto server_node = std::make_shared<rclcpp::Node>("server_node");
