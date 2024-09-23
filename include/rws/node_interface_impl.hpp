@@ -20,15 +20,7 @@ public:
     std::function<void(std::shared_ptr<const rclcpp::SerializedMessage>)> callback,
     const rclcpp::SubscriptionOptions & options = (rclcpp::SubscriptionOptions()))
   {
-    auto ts_lib = rws::get_typesupport_library(topic_type, "rosidl_typesupport_cpp");
-
-    auto subscription = std::make_shared<rclcpp::GenericSubscription>(
-      node_->get_node_topics_interface()->get_node_base_interface(), std::move(ts_lib), topic_name,
-      topic_type, qos, callback, options);
-
-    node_->get_node_topics_interface()->add_subscription(subscription, options.callback_group);
-
-    return subscription;
+    return node_->create_generic_subscription(topic_name, topic_type, qos, callback, options);
   }
 
   std::shared_ptr<rclcpp::GenericPublisher> create_generic_publisher(
