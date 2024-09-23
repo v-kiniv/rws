@@ -402,7 +402,7 @@ static std::string members_to_meta(
         auto sub_members = static_cast<const MessageMembers *>(member->members_->data);
         auto msg_path = get_type_from_message_members(sub_members);
 
-        s << sub_members->message_name_ << b << " " << name << "\n";
+        s << msg_path << b << " " << name << "\n";
 
         if (deps.count(msg_path) == 0) {
           deps[msg_path] = members_to_meta(sub_members, deps, rosbridge_compatible, name);

@@ -39,8 +39,8 @@ TEST_F(TranslateFixture, DescribeStdMsgsBuiltins)
   auto msg_desc = generate_message_meta("test_msgs/msg/Builtins");
 
   std::string expected =
-    "Duration duration_value\n"
-    "Time time_value\n"
+    "builtin_interfaces/msg/Duration duration_value\n"
+    "builtin_interfaces/msg/Time time_value\n"
     "============\n"
     "MSG: builtin_interfaces/msg/Duration\n"
     "int32 sec\n"
@@ -58,7 +58,7 @@ TEST_F(TranslateFixture, RosbridgeCompatibleDescriptionHasRenamedNanosecondsFiel
   auto msg_desc = generate_message_meta("rcl_interfaces/msg/Log", true);
 
   std::string expected =
-    "Time stamp\n"
+    "builtin_interfaces/msg/Time stamp\n"
     "uint8 level\n"
     "string name\n"
     "string msg\n"
@@ -92,9 +92,9 @@ TEST_F(TranslateFixture, DescribeTestMsgsUnboundedSequence)
     "int64[] int64_values\n"
     "uint64[] uint64_values\n"
     "string[] string_values\n"
-    "BasicTypes[] basic_types_values\n"
-    "Constants[] constants_values\n"
-    "Defaults[] defaults_values\n"
+    "test_msgs/msg/BasicTypes[] basic_types_values\n"
+    "test_msgs/msg/Constants[] constants_values\n"
+    "test_msgs/msg/Defaults[] defaults_values\n"
     "bool[] bool_values_default\n"
     "uint8[] byte_values_default\n"
     "uint8[] char_values_default\n"
@@ -165,9 +165,9 @@ TEST_F(TranslateFixture, DescribeTestMsgsArrays)
     "int64[3] int64_values\n"
     "uint64[3] uint64_values\n"
     "string[3] string_values\n"
-    "BasicTypes[3] basic_types_values\n"
-    "Constants[3] constants_values\n"
-    "Defaults[3] defaults_values\n"
+    "test_msgs/msg/BasicTypes[3] basic_types_values\n"
+    "test_msgs/msg/Constants[3] constants_values\n"
+    "test_msgs/msg/Defaults[3] defaults_values\n"
     "bool[3] bool_values_default\n"
     "uint8[3] byte_values_default\n"
     "uint8[3] char_values_default\n"
@@ -244,6 +244,30 @@ TEST_F(TranslateFixture, DeserializeRclInterfacesLogMessage)
 
   auto log_msg_json = rws::serialized_message_to_json("rcl_interfaces/msg/Log", serialized_msg);
   EXPECT_EQ(log_msg_json, expected);
+}
+
+TEST_F(TranslateFixture, DescribeMsgsNestedType)
+{
+  auto msg_desc = generate_message_meta("sensor_msgs/Image");
+
+  std::string expected =
+    "std_msgs/msg/Header header\n"
+    "uint32 height\n"
+    "uint32 width\n"
+    "string encoding\n"
+    "uint8 is_bigendian\n"
+    "uint32 step\n"
+    "uint8[] data\n"
+    "============\n"
+    "MSG: builtin_interfaces/msg/Time\n"
+    "int32 sec\n"
+    "uint32 nanosec\n"
+    "============\n"
+    "MSG: std_msgs/msg/Header\n"
+    "builtin_interfaces/msg/Time stamp\n"
+    "string frame_id\n";
+
+  EXPECT_EQ(msg_desc, expected);
 }
 
 }  // namespace rws
