@@ -263,7 +263,7 @@ static void json_to_serialized_message(cycser & ser, const MessageMembers * memb
           }
 
           for (size_t index = 0; index < array_size; ++index) {
-            json_to_serialized_message(ser, sub_members, field[member->name_][index]);
+            json_to_serialized_message(ser, sub_members, field[index]);
           }
         }
         break;
