@@ -122,6 +122,54 @@ void ClientHandler::send_message(std::vector<std::uint8_t> & msg)
   }
 }
 
+void ClientHandler::subscription_callback(topic_params params, std::shared_ptr<const rclcpp::SerializedMessage> message)
+{
+  uint32_t secs = node_->now().seconds();
+  uint32_t nsecs = node_->now().nanoseconds() - (secs * 1000000000);
+
+  json m = {
+    {"op", "publish"},
+    {"topic", params.topic},
+  };
+
+  auto compression = params.compression;
+  auto sub_type = params.type;
+
+  if (compression == "cbor-raw") {
+    auto buf = std::vector<std::uint8_t>(
+      &message->get_rcl_serialized_message().buffer[0],
+      &message->get_rcl_serialized_message()
+          .buffer[message->get_rcl_serialized_message().buffer_length]);
+    m["msg"] = {{"secs", secs}, {"nsecs", nsecs}, {"bytes", json::binary_t(buf)}};
+    std::vector<std::uint8_t> cbor_buf = json::to_cbor(m);
+    this->send_message(cbor_buf);
+  } else if (compression == "cbor") {
+    m["msg"] = rws::serialized_message_to_json(sub_type, std::move(message));
+    std::vector<std::uint8_t> buf = json::to_cbor(m);
+    this->send_message(buf);
+  } else if (compression == "bson") {
+    m["msg"] = rws::serialized_message_to_json(sub_type, message);
+    std::vector<std::uint8_t> buf = json::to_bson(m);
+    this->send_message(buf);
+  } else if (compression == "msgpack") {
+    m["msg"] = rws::serialized_message_to_json(sub_type, message);
+    std::vector<std::uint8_t> buf = json::to_msgpack(m);
+    this->send_message(buf);
+  } else if (compression == "ubjson") {
+    m["msg"] = rws::serialized_message_to_json(sub_type, message);
+    std::vector<std::uint8_t> buf = json::to_ubjson(m);
+    this->send_message(buf);
+  } else if (compression == "bjdata") {
+    m["msg"] = rws::serialized_message_to_json(sub_type, message);
+    std::vector<std::uint8_t> buf = json::to_bjdata(m);
+    this->send_message(buf);
+  } else {
+    m["msg"] = rws::serialized_message_to_json(sub_type, message);
+    std::string json_str = m.dump();
+    this->send_message(json_str);
+  }
+}
+
 bool ClientHandler::subscribe_to_topic(const json & msg, json & response)
 {
   response["op"] = "subscribe_response";
@@ -152,53 +200,10 @@ bool ClientHandler::subscribe_to_topic(const json & msg, json & response)
 
   auto sub_type = topics[topic][0];
   if (subscriptions_.count(topic) == 0) {
+    
     topic_params params(topic, sub_type, history_depth, compression);
     subscriptions_[topic] = connector_->subscribe_to_topic(
-      client_id_, params,
-      [this, topic, sub_type,
-       compression](std::shared_ptr<const rclcpp::SerializedMessage> message) {
-        uint32_t secs = node_->now().seconds();
-        uint32_t nsecs = node_->now().nanoseconds() - (secs * 1000000000);
-
-        json m = {
-          {"op", "publish"},
-          {"topic", topic},
-        };
-
-        if (compression == "cbor-raw") {
-          auto buf = std::vector<std::uint8_t>(
-            &message->get_rcl_serialized_message().buffer[0],
-            &message->get_rcl_serialized_message()
-               .buffer[message->get_rcl_serialized_message().buffer_length]);
-          m["msg"] = {{"secs", secs}, {"nsecs", nsecs}, {"bytes", json::binary_t(buf)}};
-          std::vector<std::uint8_t> cbor_buf = json::to_cbor(m);
-          this->send_message(cbor_buf);
-        } else if (compression == "cbor") {
-          m["msg"] = rws::serialized_message_to_json(sub_type, std::move(message));
-          std::vector<std::uint8_t> buf = json::to_cbor(m);
-          this->send_message(buf);
-        } else if (compression == "bson") {
-          m["msg"] = rws::serialized_message_to_json(sub_type, message);
-          std::vector<std::uint8_t> buf = json::to_bson(m);
-          this->send_message(buf);
-        } else if (compression == "msgpack") {
-          m["msg"] = rws::serialized_message_to_json(sub_type, message);
-          std::vector<std::uint8_t> buf = json::to_msgpack(m);
-          this->send_message(buf);
-        } else if (compression == "ubjson") {
-          m["msg"] = rws::serialized_message_to_json(sub_type, message);
-          std::vector<std::uint8_t> buf = json::to_ubjson(m);
-          this->send_message(buf);
-        } else if (compression == "bjdata") {
-          m["msg"] = rws::serialized_message_to_json(sub_type, message);
-          std::vector<std::uint8_t> buf = json::to_bjdata(m);
-          this->send_message(buf);
-        } else {
-          m["msg"] = rws::serialized_message_to_json(sub_type, message);
-          std::string json_str = m.dump();
-          this->send_message(json_str);
-        }
-      });
+      client_id_, params, std::bind(&ClientHandler::subscription_callback, this, std::placeholders::_1, std::placeholders::_2));
 
     response["type"] = sub_type;
     response["result"] = true;

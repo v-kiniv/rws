@@ -47,7 +47,7 @@ TEST_F(ConnectorFixture, subscribe_to_topic_calls_create_generic_subscription_wi
     .Times(1)
     .WillRepeatedly(Return(nullptr));
 
-  auto handler = [](ConstSharedMessage message) {};
+  auto handler = [](topic_params, ConstSharedMessage) {};
   connector.subscribe_to_topic(0, params, handler);
 }
 
@@ -64,7 +64,7 @@ TEST_F(ConnectorFixture, subscribe_to_topic_calls_create_generic_subscription_on
 
   EXPECT_CALL(*node, create_generic_subscription(_, _, _, _, _)).Times(1).WillOnce(Return(nullptr));
 
-  auto handler = [](ConstSharedMessage message) {};
+  auto handler = [](topic_params, ConstSharedMessage) {};
   connector.subscribe_to_topic(0, params, handler);
   connector.subscribe_to_topic(0, params, handler);
 }
@@ -83,9 +83,9 @@ TEST_F(
     .Times(1)
     .WillRepeatedly(
       Invoke([&topic_callback](
-               const std::string & topic_name, const std::string & topic_type,
-               const rclcpp::QoS & qos, std::function<void(ConstSharedMessage)> callback,
-               const rclcpp::SubscriptionOptions & options) {
+               const std::string &, const std::string &,
+               const rclcpp::QoS &, std::function<void(ConstSharedMessage)> callback,
+               const rclcpp::SubscriptionOptions &) {
         topic_callback = callback;
         return nullptr;
       }));
@@ -93,12 +93,12 @@ TEST_F(
   // Client 1
   std::vector<ConstSharedMessage> client0_msgs;
   connector.subscribe_to_topic(
-    0, params, [&client0_msgs](ConstSharedMessage message) { client0_msgs.push_back(message); });
+    0, params, [&client0_msgs](topic_params, ConstSharedMessage message) { client0_msgs.push_back(message); });
 
   // Client 2
   std::vector<ConstSharedMessage> client1_msgs;
   connector.subscribe_to_topic(
-    1, params, [&client1_msgs](ConstSharedMessage message) { client1_msgs.push_back(message); });
+    1, params, [&client1_msgs](topic_params, ConstSharedMessage message) { client1_msgs.push_back(message); });
 
   // "Publish" messages
   topic_callback(messages[0]);
@@ -131,9 +131,9 @@ TEST_F(
     .Times(1)
     .WillRepeatedly(
       Invoke([&topic0_callback](
-               const std::string & topic_name, const std::string & topic_type,
-               const rclcpp::QoS & qos, std::function<void(ConstSharedMessage)> callback,
-               const rclcpp::SubscriptionOptions & options) {
+               const std::string &, const std::string &,
+               const rclcpp::QoS &, std::function<void(ConstSharedMessage)> callback,
+               const rclcpp::SubscriptionOptions &) {
         topic0_callback = callback;
         return nullptr;
       }));
@@ -144,9 +144,9 @@ TEST_F(
     .Times(1)
     .WillRepeatedly(
       Invoke([&topic1_callback](
-               const std::string & topic_name, const std::string & topic_type,
-               const rclcpp::QoS & qos, std::function<void(ConstSharedMessage)> callback,
-               const rclcpp::SubscriptionOptions & options) {
+               const std::string &, const std::string &,
+               const rclcpp::QoS &, std::function<void(ConstSharedMessage)> callback,
+               const rclcpp::SubscriptionOptions &) {
         topic1_callback = callback;
         return nullptr;
       }));
@@ -154,12 +154,12 @@ TEST_F(
   // Client 1
   std::vector<ConstSharedMessage> client0_msgs;
   connector.subscribe_to_topic(
-    0, params0, [&client0_msgs](ConstSharedMessage message) { client0_msgs.push_back(message); });
+    0, params0, [&client0_msgs](topic_params, ConstSharedMessage message) { client0_msgs.push_back(message); });
 
   // Client 2
   std::vector<ConstSharedMessage> client1_msgs;
   connector.subscribe_to_topic(
-    1, params1, [&client1_msgs](ConstSharedMessage message) { client1_msgs.push_back(message); });
+    1, params1, [&client1_msgs](topic_params, ConstSharedMessage message) { client1_msgs.push_back(message); });
 
   // "Publish" messages
   topic0_callback(messages[0]);
@@ -185,15 +185,15 @@ TEST_F(ConnectorFixture, connector_unsubscribes_from_topic_when_no_more_clients_
 
   // Client 1
   auto client0_unsub_t0 =
-    connector.subscribe_to_topic(0, topic0_p, [](ConstSharedMessage message) {});
+    connector.subscribe_to_topic(0, topic0_p, [](topic_params, ConstSharedMessage) {});
   EXPECT_EQ(connector.is_subscribed_to_topic(topic0_p), true);
 
   // Client 2
-  auto client1_unsub_t0 = connector.subscribe_to_topic(1, topic0_p, [](ConstSharedMessage) {});
+  auto client1_unsub_t0 = connector.subscribe_to_topic(1, topic0_p, [](topic_params, ConstSharedMessage) {});
   EXPECT_EQ(connector.is_subscribed_to_topic(topic0_p), true);
-  auto client1_unsub_t1 = connector.subscribe_to_topic(1, topic1_p, [](ConstSharedMessage) {});
+  auto client1_unsub_t1 = connector.subscribe_to_topic(1, topic1_p, [](topic_params, ConstSharedMessage) {});
   EXPECT_EQ(connector.is_subscribed_to_topic(topic1_p), true);
-  auto client1_unsub_t2 = connector.subscribe_to_topic(1, topic2_p, [](ConstSharedMessage) {});
+  auto client1_unsub_t2 = connector.subscribe_to_topic(1, topic2_p, [](topic_params, ConstSharedMessage) {});
   EXPECT_EQ(connector.is_subscribed_to_topic(topic2_p), true);
 
   // Unsubscribe client 0 from topic 0
