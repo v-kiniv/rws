@@ -10,9 +10,6 @@
 namespace rws
 {
 
-typedef std::function<void(std::shared_ptr<const rclcpp::SerializedMessage> message)>
-  subscription_callback;
-
 struct topic_params
 {
   topic_params() : history_depth(10), compression("none"), topic(""), type(""), latch(false) {}
@@ -40,6 +37,9 @@ struct topic_params
   bool latch;  // only for publishers, rws internal
 };
 
+typedef std::function<void(topic_params params, std::shared_ptr<const rclcpp::SerializedMessage> message)>
+  subscription_callback;
+
 template <class PublisherClass = rclcpp::GenericPublisher>
 class Connector
 {
@@ -63,13 +63,7 @@ public:
     if (matching_subscriber == nullptr || is_transient_local) {
       handle.subscription = node_->create_generic_subscription(
         params.topic, params.type, qos,
-        [this, params](std::shared_ptr<const rclcpp::SerializedMessage> message) {
-          for (auto & sub : subscribers_) {
-            if (sub.params == params) {
-              sub.callback(message);
-            }
-          }
-        });
+        std::bind(&Connector::topic_message_callback, this, params, std::placeholders::_1));
     } else {
       handle.subscription = matching_subscriber->subscription;
     }
@@ -179,6 +173,15 @@ private:
       }
     }
     return nullptr;
+  }
+
+  void topic_message_callback(topic_params params, std::shared_ptr<const rclcpp::SerializedMessage> message)
+  {
+    for (auto & sub : subscribers_) {
+      if (sub.params == params) {
+        sub.callback(params, message);
+      }
+    }
   }
 };
 
