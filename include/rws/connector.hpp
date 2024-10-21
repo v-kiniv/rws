@@ -14,30 +14,36 @@ struct topic_params
 {
   topic_params() : history_depth(10), compression("none"), topic(""), type(""), latch(false) {}
   topic_params(std::string t, std::string tp)
-  : history_depth(10), compression("none"), topic(t), type(tp), latch(false)
+  : history_depth(10), compression("none"), topic(t), type(tp), latch(false), throttle_rate(0), last_sent_timestamp(0)
   {
   }
-  topic_params(std::string t, std::string tp, size_t qs, std::string c)
-  : history_depth(qs), compression(c), topic(t), type(tp), latch(false)
+  topic_params(std::string t, std::string tp, size_t qs, std::string c, size_t tr)
+  : history_depth(qs), compression(c), topic(t), type(tp), latch(false), throttle_rate(tr), last_sent_timestamp(0)
   {
   }
   topic_params(std::string t, std::string tp, size_t qs, bool l)
-  : history_depth(qs), compression("none"), topic(t), type(tp), latch(l)
+  : history_depth(qs), compression("none"), topic(t), type(tp), latch(l), throttle_rate(0), last_sent_timestamp(0)
   {
   }
   bool operator==(const topic_params & p)
   {
-    return topic == p.topic && type == p.type && history_depth == p.history_depth &&
-           compression == p.compression && latch == p.latch;
+    return  topic == p.topic && 
+            type == p.type && 
+            history_depth == p.history_depth && 
+            throttle_rate == p.throttle_rate &&
+            compression == p.compression &&
+            latch == p.latch;
   }
+  uint64_t last_sent_timestamp;
   size_t history_depth;
+  size_t throttle_rate;
   std::string compression;  // rws internal
   std::string topic;
   std::string type;
   bool latch;  // only for publishers, rws internal
 };
 
-typedef std::function<void(topic_params params, std::shared_ptr<const rclcpp::SerializedMessage> message)>
+typedef std::function<void(topic_params & params, std::shared_ptr<const rclcpp::SerializedMessage> message)>
   subscription_callback;
 
 template <class PublisherClass = rclcpp::GenericPublisher>
@@ -175,7 +181,7 @@ private:
     return nullptr;
   }
 
-  void topic_message_callback(topic_params params, std::shared_ptr<const rclcpp::SerializedMessage> message)
+  void topic_message_callback(topic_params & params, std::shared_ptr<const rclcpp::SerializedMessage> message)
   {
     for (auto & sub : subscribers_) {
       if (sub.params == params) {

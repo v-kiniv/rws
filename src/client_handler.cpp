@@ -14,6 +14,7 @@
 
 #include "rws/client_handler.hpp"
 
+#include <chrono>
 #include <cstdio>
 #include <nlohmann/json.hpp>
 
@@ -122,7 +123,7 @@ void ClientHandler::send_message(std::vector<std::uint8_t> & msg)
   }
 }
 
-void ClientHandler::subscription_callback(topic_params params, std::shared_ptr<const rclcpp::SerializedMessage> message)
+void ClientHandler::subscription_callback(topic_params & params, std::shared_ptr<const rclcpp::SerializedMessage> message)
 {
   uint32_t secs = node_->now().seconds();
   uint32_t nsecs = node_->now().nanoseconds() - (secs * 1000000000);
@@ -132,8 +133,19 @@ void ClientHandler::subscription_callback(topic_params params, std::shared_ptr<c
     {"topic", params.topic},
   };
 
+  auto throttle_rate = params.throttle_rate;
   auto compression = params.compression;
   auto sub_type = params.type;
+
+  if (throttle_rate > 0) {
+    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch()
+    ).count();
+    if (timestamp - params.last_sent_timestamp < throttle_rate) {
+      return;
+    }
+    params.last_sent_timestamp = timestamp;
+  }
 
   if (compression == "cbor-raw") {
     auto buf = std::vector<std::uint8_t>(
@@ -195,13 +207,17 @@ bool ClientHandler::subscribe_to_topic(const json & msg, json & response)
   } else if (msg.contains("queue_size") && msg["queue_size"].is_number()) {
     history_depth = msg["queue_size"];
   }
+  size_t throttle_rate = 0;
+  if (msg.contains("throttle_rate") && msg["throttle_rate"].is_number()) {
+    throttle_rate = msg["throttle_rate"];
+  }
   std::string compression =
     (!msg.contains("compression") || !msg["compression"].is_string()) ? "none" : msg["compression"];
 
   auto sub_type = topics[topic][0];
   if (subscriptions_.count(topic) == 0) {
     
-    topic_params params(topic, sub_type, history_depth, compression);
+    topic_params params(topic, sub_type, history_depth, compression, throttle_rate);
     subscriptions_[topic] = connector_->subscribe_to_topic(
       client_id_, params, std::bind(&ClientHandler::subscription_callback, this, std::placeholders::_1, std::placeholders::_2));
 
