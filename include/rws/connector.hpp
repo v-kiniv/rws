@@ -56,6 +56,8 @@ public:
   std::function<void()> subscribe_to_topic(
     uint16_t client_id, topic_params & params, subscription_callback handler)
   {
+    std::lock_guard<std::mutex> guard(subscribers_mutex_);
+
     auto matching_subscriber = get_subscriber_by_params(params);
     subscriber_handle handle = {nullptr, params, handler, client_id, next_handler_id_++};
     rclcpp::QoS qos(params.history_depth);
@@ -74,10 +76,7 @@ public:
       handle.subscription = matching_subscriber->subscription;
     }
 
-    {
-      std::lock_guard<std::mutex> guard(subscribers_mutex_);
-      subscribers_.push_back(handle);
-    }
+    subscribers_.push_back(handle);
 
     return [this, handle_id = handle.handle_id]() {
       std::lock_guard<std::mutex> guard(subscribers_mutex_);
@@ -104,6 +103,8 @@ public:
     uint16_t client_id, topic_params & params,
     std::function<void(std::shared_ptr<const rclcpp::SerializedMessage>)> & cb_in)
   {
+    std::lock_guard<std::mutex> guard(publishers_mutex_);
+
     auto matching_publisher = get_publisher_by_params(params);
     publisher_handle handle({nullptr, params, client_id, next_handler_id_++});
 
@@ -117,10 +118,7 @@ public:
       handle.publisher = matching_publisher->publisher;
     }
 
-    {
-      std::lock_guard<std::mutex> guard(publishers_mutex_);
-      publishers_.push_back(handle);
-    }
+    publishers_.push_back(handle);
 
     cb_in = [p = handle.publisher](std::shared_ptr<const rclcpp::SerializedMessage> message) {
       p->publish(*message);
