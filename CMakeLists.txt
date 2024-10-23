@@ -5,10 +5,12 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+cmake_policy(SET CMP0135 NEW)
+
 ### Fetch JSON at configure time
 include(FetchContent)
-FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz)
-FetchContent_MakeAvailable(json)
+fetchcontent_declare(json URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz)
+fetchcontent_makeavailable(json)
 # /JSON
 
 ### Fetch ASIO at configure time
@@ -18,13 +20,13 @@ add_definitions(
   -DBOOST_REGEX_NO_LIB
   -DASIO_STANDALONE
 )
-FetchContent_Declare(asio
+fetchcontent_declare(asio
   GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
   GIT_TAG asio-1-24-0)
 
-FetchContent_GetProperties(asio)
+fetchcontent_getproperties(asio)
 if(NOT asio_POPULATED)
-  FetchContent_Populate(asio)
+  fetchcontent_populate(asio)
 endif()
 
 add_library(asio INTERFACE)
@@ -37,12 +39,12 @@ add_definitions(
   -D_WEBSOCKETPP_CPP11_STL_
   -D_WEBSOCKETPP_CPP11_FUNCTIONAL_
 )
-FetchContent_Declare(websocketpp
+fetchcontent_declare(websocketpp
 GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
   GIT_TAG 0.8.2)
-FetchContent_GetProperties(websocketpp)
+fetchcontent_getproperties(websocketpp)
 if(NOT websocketpp_POPULATED)
-  FetchContent_Populate(websocketpp)
+  fetchcontent_populate(websocketpp)
   add_subdirectory(${websocketpp_SOURCE_DIR} ${websocketpp_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
@@ -62,7 +64,7 @@ foreach(Dependency IN ITEMS ${DEPENDENCIES})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
-FILE(GLOB SRCFILES src/*.*pp)
+file(GLOB SRCFILES src/*.*pp)
 add_executable(rws_server ${SRCFILES})
 ament_target_dependencies(rws_server ${DEPENDENCIES})
 target_include_directories(rws_server PUBLIC
