@@ -12,7 +12,7 @@ namespace rws
 
 struct topic_params
 {
-  topic_params() : history_depth(10), compression("none"), topic(""), type(""), latch(false) {}
+  topic_params() : history_depth(10), compression("none"), topic(""), type(""), latch(false), throttle_rate(0), last_sent_timestamp(0) {}
   topic_params(std::string t, std::string tp)
   : history_depth(10), compression("none"), topic(t), type(tp), latch(false), throttle_rate(0), last_sent_timestamp(0)
   {
@@ -34,13 +34,13 @@ struct topic_params
             compression == p.compression &&
             latch == p.latch;
   }
-  uint64_t last_sent_timestamp;
   size_t history_depth;
-  size_t throttle_rate;
   std::string compression;  // rws internal
   std::string topic;
   std::string type;
   bool latch;  // only for publishers, rws internal
+  size_t throttle_rate;
+  uint64_t last_sent_timestamp;
 };
 
 typedef std::function<void(topic_params & params, std::shared_ptr<const rclcpp::SerializedMessage> message)>
