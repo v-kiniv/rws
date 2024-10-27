@@ -127,6 +127,36 @@ TEST_F(ClientHandlerFixture, rosapi_topic_and_raw_types_is_thread_safe)
   EXPECT_NE(server_node, nullptr);
 }
 
+TEST_F(ClientHandlerFixture, subscription_callback_throttles_messages)
+{
+  auto server_node = std::make_shared<rclcpp::Node>("server_node");
+  auto node_interface = std::make_shared<rws::NodeInterfaceImpl>(server_node);
+  auto connector = std::make_shared<rws::Connector<>>(node_interface);
+
+  std::vector<std::string> messages;
+  std::function<void(std::string &)> callback = [&messages](std::string & message) {
+    messages.push_back(message);
+  };
+  std::function<void(std::vector<std::uint8_t> &)> binary_callback = [](std::vector<std::uint8_t> &) {};
+
+  ClientHandler handler(0, node_interface, connector, true, callback, binary_callback);
+
+  topic_params params;
+  params.topic = "/test_topic";
+  params.type = "std_msgs/msg/String";
+  params.throttle_rate = 100;
+
+  auto message = std::make_shared<const rclcpp::SerializedMessage>();
+
+  // Send multiple messages rapidly
+  handler.subscription_callback(params, message);
+  handler.subscription_callback(params, message);
+  handler.subscription_callback(params, message);
+
+  // Check that the message was only actually sent once
+  EXPECT_EQ(messages.size(), 1);
+}
+
 }  // namespace rws
 
 int main(int argc, char ** argv)

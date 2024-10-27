@@ -1,5 +1,4 @@
 #include "rws/connector.hpp"
-
 #include <gtest/gtest.h>
 
 #include "node_mock.hpp"
@@ -40,6 +39,7 @@ TEST_F(ConnectorFixture, subscribe_to_topic_calls_create_generic_subscription_wi
   EXPECT_EQ(params.topic, "/topic");
   EXPECT_EQ(params.type, "std_msgs/msg/String");
   EXPECT_EQ(params.history_depth, 10);
+  EXPECT_EQ(params.throttle_rate, 0);
   EXPECT_EQ(params.compression, "none");
 
   EXPECT_CALL(
@@ -60,6 +60,7 @@ TEST_F(ConnectorFixture, subscribe_to_topic_calls_create_generic_subscription_on
   EXPECT_EQ(params.topic, "/topic");
   EXPECT_EQ(params.type, "std_msgs/msg/String");
   EXPECT_EQ(params.history_depth, 10);
+  EXPECT_EQ(params.throttle_rate, 0);
   EXPECT_EQ(params.compression, "none");
 
   EXPECT_CALL(*node, create_generic_subscription(_, _, _, _, _)).Times(1).WillOnce(Return(nullptr));
