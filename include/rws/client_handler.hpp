@@ -35,8 +35,6 @@ public:
     std::function<void(std::vector<std::uint8_t> & msg)> binary_callback);
   json process_message(json & msg);
 
-  void subscription_callback(topic_params & params, std::shared_ptr<const rclcpp::SerializedMessage> message);
-
   ~ClientHandler();
 
 private:
@@ -68,6 +66,7 @@ private:
   bool advertise_topic(const json & request, json & response_out);
   bool unadvertise_topic(const json & request, json & response_out);
   bool publish_to_topic(const json & request, json & response_out);
+  void subscription_callback(topic_params & params, std::shared_ptr<const rclcpp::SerializedMessage> message);
 
   // Service handlers
   bool call_service(const json & request, json & response_out);

@@ -133,19 +133,8 @@ void ClientHandler::subscription_callback(topic_params & params, std::shared_ptr
     {"topic", params.topic},
   };
 
-  auto throttle_rate = params.throttle_rate;
   auto compression = params.compression;
   auto sub_type = params.type;
-
-  if (throttle_rate > 0) {
-    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-      std::chrono::system_clock::now().time_since_epoch()
-    ).count();
-    if (timestamp - params.last_sent_timestamp < throttle_rate) {
-      return;
-    }
-    params.last_sent_timestamp = timestamp;
-  }
 
   if (compression == "cbor-raw") {
     auto buf = std::vector<std::uint8_t>(
@@ -207,9 +196,10 @@ bool ClientHandler::subscribe_to_topic(const json & msg, json & response)
   } else if (msg.contains("queue_size") && msg["queue_size"].is_number()) {
     history_depth = msg["queue_size"];
   }
-  size_t throttle_rate = 0;
+  rclcpp::Duration throttle_rate(0, 0);
   if (msg.contains("throttle_rate") && msg["throttle_rate"].is_number()) {
-    throttle_rate = msg["throttle_rate"];
+    size_t throttle_rate_ms = msg["throttle_rate"];
+    throttle_rate = rclcpp::Duration(0, throttle_rate_ms * 1000000);
   }
   std::string compression =
     (!msg.contains("compression") || !msg["compression"].is_string()) ? "none" : msg["compression"];
