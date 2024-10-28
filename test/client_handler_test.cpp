@@ -42,8 +42,8 @@ TEST_F(ClientHandlerFixture, subsribe_to_topic_is_thread_safe)
   std::vector<std::shared_ptr<rws::ClientHandler>> nodes;
   for (int ti = 0; ti < nodes_count; ti++) {
     nodes.push_back(std::make_shared<rws::ClientHandler>(
-      ti, node_interface, connector, true, [](std::string & msg) {},
-      [](std::vector<std::uint8_t> & msg) {}));
+      ti, node_interface, connector, true, [](std::string &) {},
+      [](std::vector<std::uint8_t> &) {}));
     threads.push_back(std::thread([ti, nodes, &json_o]() {
       for (int i = 0; i < 1000; i++) {
         nodes[ti]->process_message(json_o);
@@ -78,8 +78,8 @@ TEST_F(ClientHandlerFixture, advertise_topic_is_thread_safe)
   std::vector<std::shared_ptr<rws::ClientHandler>> nodes;
   for (int ti = 0; ti < nodes_count; ti++) {
     nodes.push_back(std::make_shared<rws::ClientHandler>(
-      ti, node_interface, connector, false, [](std::string & msg) {},
-      [](std::vector<std::uint8_t> & msg) {}));
+      ti, node_interface, connector, false, [](std::string &) {},
+      [](std::vector<std::uint8_t> &) {}));
     threads.push_back(std::thread([ti, nodes, &json_o]() {
       for (int i = 0; i < 1000; i++) {
         nodes[ti]->process_message(json_o);
@@ -111,8 +111,8 @@ TEST_F(ClientHandlerFixture, rosapi_topic_and_raw_types_is_thread_safe)
   std::vector<std::shared_ptr<rws::ClientHandler>> nodes;
   for (int ti = 0; ti < nodes_count; ti++) {
     nodes.push_back(std::make_shared<rws::ClientHandler>(
-      ti, node_interface, connector, true, [](std::string & msg) {},
-      [](std::vector<std::uint8_t> & msg) {}));
+      ti, node_interface, connector, true, [](std::string &) {},
+      [](std::vector<std::uint8_t> &) {}));
     threads.push_back(std::thread([ti, nodes, &json_o]() {
       for (int i = 0; i < 1000; i++) {
         nodes[ti]->process_message(json_o);
