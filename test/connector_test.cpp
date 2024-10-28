@@ -20,8 +20,9 @@ public:
 
   void SetUp() override
   {
-    messages.push_back(std::make_shared<const rclcpp::SerializedMessage>());
-    messages.push_back(std::make_shared<const rclcpp::SerializedMessage>());
+    for(int i = 0; i < 6; i++) {
+      messages.push_back(std::make_shared<const rclcpp::SerializedMessage>());
+    }
   }
 
   void TearDown() override { messages.clear(); }
@@ -346,14 +347,14 @@ TEST_F(ConnectorFixture, subscription_callback_throttles_messages)
   
   // "Publish" messages
   topic_callback(messages[0]); // last_sent = 0, 0
-  topic_callback(messages[0]); //             1000, 50
-  topic_callback(messages[0]); //             1000, 100
-  topic_callback(messages[1]); //             1000, 150
+  topic_callback(messages[1]); //             1000, 50
+  topic_callback(messages[2]); //             1000, 100
+  topic_callback(messages[3]); //             1000, 150
 
   // Expect client to receive first and last message
   EXPECT_EQ(client_msgs.size(), 2);
   EXPECT_EQ(client_msgs[0], messages[0]);
-  EXPECT_EQ(client_msgs[1], messages[1]);
+  EXPECT_EQ(client_msgs[1], messages[3]);
 }
 
 }  // namespace rws
