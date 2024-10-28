@@ -12,32 +12,37 @@ namespace rws
 
 struct topic_params
 {
-  topic_params() : history_depth(10), compression("none"), topic(""), type(""), latch(false) {}
+  topic_params() : history_depth(10), compression("none"), topic(""), type(""), latch(false), throttle_rate(0, 0) {}
   topic_params(std::string t, std::string tp)
-  : history_depth(10), compression("none"), topic(t), type(tp), latch(false)
+  : history_depth(10), compression("none"), topic(t), type(tp), latch(false), throttle_rate(0, 0)
   {
   }
-  topic_params(std::string t, std::string tp, size_t qs, std::string c)
-  : history_depth(qs), compression(c), topic(t), type(tp), latch(false)
+  topic_params(std::string t, std::string tp, size_t qs, std::string c, rclcpp::Duration tr)
+  : history_depth(qs), compression(c), topic(t), type(tp), latch(false), throttle_rate(tr)
   {
   }
   topic_params(std::string t, std::string tp, size_t qs, bool l)
-  : history_depth(qs), compression("none"), topic(t), type(tp), latch(l)
+  : history_depth(qs), compression("none"), topic(t), type(tp), latch(l), throttle_rate(0, 0)
   {
   }
   bool operator==(const topic_params & p)
   {
-    return topic == p.topic && type == p.type && history_depth == p.history_depth &&
-           compression == p.compression && latch == p.latch;
+    return  topic == p.topic && 
+            type == p.type && 
+            history_depth == p.history_depth && 
+            throttle_rate == p.throttle_rate &&
+            compression == p.compression &&
+            latch == p.latch;
   }
   size_t history_depth;
   std::string compression;  // rws internal
   std::string topic;
   std::string type;
   bool latch;  // only for publishers, rws internal
+  rclcpp::Duration throttle_rate;
 };
 
-typedef std::function<void(topic_params params, std::shared_ptr<const rclcpp::SerializedMessage> message)>
+typedef std::function<void(topic_params & params, std::shared_ptr<const rclcpp::SerializedMessage> message)>
   subscription_callback;
 
 template <class PublisherClass = rclcpp::GenericPublisher>
@@ -53,7 +58,7 @@ public:
     std::lock_guard<std::mutex> guard(subscribers_mutex_);
 
     auto matching_subscriber = get_subscriber_by_params(params);
-    subscriber_handle handle = {nullptr, params, handler, client_id, next_handler_id_++};
+    subscriber_handle handle = {nullptr, params, handler, client_id, next_handler_id_++, rclcpp::Time(0, 0, RCL_ROS_TIME)};
     rclcpp::QoS qos(params.history_depth);
     auto info = node_->get_publishers_info_by_topic(params.topic);
     for(const auto& node : info)
@@ -137,6 +142,7 @@ private:
     subscription_callback callback;
     size_t client_id;
     size_t handle_id;
+    rclcpp::Time last_sent;
   };
   struct publisher_handle
   {
@@ -173,11 +179,13 @@ private:
     return nullptr;
   }
 
-  void topic_message_callback(topic_params params, std::shared_ptr<const rclcpp::SerializedMessage> message)
+  void topic_message_callback(topic_params & params, std::shared_ptr<const rclcpp::SerializedMessage> message)
   {
     for (auto & sub : subscribers_) {
-      if (sub.params == params) {
+      if (sub.params == params &&
+          (params.throttle_rate.nanoseconds() == 0 || (sub.last_sent + params.throttle_rate) < node_->now())) {
         sub.callback(params, message);
+        sub.last_sent = node_->now();
       }
     }
   }
