@@ -172,54 +172,17 @@ std::string message_type_to_ros1_style(const std::string & ros2_msg_type)
   return s;
 }
 
-static void allocate_string_members(const MessageMembers * members, uint8_t * buf) {
-  std::string str;
-  size_t str_capacity = str.capacity();
-  for (size_t i = 0; i < str_capacity + 1; i++) {
-    str += "a";
-  }
-
-  std::wstring wstr;
-  size_t wstr_capacity = wstr.capacity();
-  for (size_t i = 0; i < wstr_capacity + 1; i++) {
-    wstr += L"a";
-  }
-
-  for (uint32_t i = 0; i < members->member_count_; ++i) {
-    const auto member = members->members_ + i;
-
-    if (member->type_id_ == rosidl_typesupport_introspection_cpp::ROS_TYPE_STRING) {
-      if (member->is_array_) {
-        memcpy(
-          buf + member->offset_, new std::vector<std::string>(), sizeof(std::vector<std::string>));
-      } else {
-        memcpy(buf + member->offset_, new std::string(str), sizeof(std::string));
-      }
-    } else if (member->type_id_ == rosidl_typesupport_introspection_cpp::ROS_TYPE_WSTRING) {
-      if (member->is_array_) {
-        memcpy(
-          buf + member->offset_, new std::vector<std::wstring>(),
-          sizeof(std::vector<std::wstring>));
-      } else {
-        memcpy(buf + member->offset_, new std::wstring(wstr), sizeof(std::wstring));
-      }
-    } else if(member->type_id_ == rosidl_typesupport_introspection_cpp::ROS_TYPE_MESSAGE) {
-      auto sub_members = static_cast<const MessageMembers *>(member->members_->data);
-      if (!member->is_array_) {
-        allocate_string_members(sub_members, buf);
-      }
-    }
-  }
-}
-
 std::shared_ptr<void> allocate_message(const MessageMembers * members)
 {
-  uint8_t * buf = static_cast<uint8_t *>(malloc(members->size_of_ + MSG_MEM_BLOCK_SIZE));
-  memset(buf, 0, MSG_MEM_BLOCK_SIZE);
-
-  allocate_string_members(members, buf);
-
-  return std::shared_ptr<void>(buf);
+  void * buf = new uint8_t[members->size_of_];
+  members->init_function(buf, rosidl_runtime_cpp::MessageInitialization::ZERO);
+  return std::shared_ptr<void>(
+    buf,
+    [members](void * p)
+    {
+      members->fini_function(p);
+      delete[] reinterpret_cast<uint8_t *>(p);
+    });
 }
 
 }  // namespace rws

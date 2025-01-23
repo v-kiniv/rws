@@ -29,7 +29,6 @@ namespace rws
 
 using rosidl_typesupport_introspection_cpp::MessageMembers;
 
-const size_t MSG_MEM_BLOCK_SIZE = 1024;
 extern const char * ts_identifier;
 
 /// Load the type support library for the given type.
