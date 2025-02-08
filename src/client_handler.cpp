@@ -370,6 +370,30 @@ bool ClientHandler::call_service(const json & msg, json & response)
     return true;
   }
 
+  if (service == "/rosapi/publishers") {
+    response["values"]["publishers"] = json::array();
+
+    std::vector<rclcpp::TopicEndpointInfo> publishers = node_->get_publishers_info_by_topic(msg["args"]["topic"]);
+    for (const auto & pub_info : publishers) {
+      response["values"]["publishers"].push_back(("/" + pub_info.node_name()).c_str());
+    }
+
+    response["result"] = true;
+    return true;
+  }
+
+  if (service == "/rosapi/subscribers") {
+    response["values"]["subscribers"] = json::array();
+
+    std::vector<rclcpp::TopicEndpointInfo> subscribers = node_->get_subscriptions_info_by_topic(msg["args"]["topic"]);
+    for (const auto & sub_info : subscribers) {
+      response["values"]["subscribers"].push_back(("/" + sub_info.node_name()).c_str());
+    }
+
+    response["result"] = true;
+    return true;
+  }
+
   if (service == "/rosapi/node_details") {
     response["values"]["subscribing"] = json::array();
     response["values"]["publishing"] = json::array();
