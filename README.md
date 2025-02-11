@@ -69,6 +69,8 @@ rws_server_node = Node(
 ### Rosapi service calls
 Unlike Rosbridge, RWS does not expose `/rosapi` node, all `rosapi` related API requests are handled internally in `rws_server` node.
 
+Check the list of implemented `rosapi` services in https://github.com/v-kiniv/rws/issues/49#issue-2839982035
+
 # Dependencies
 RWS is using [websocketpp](https://github.com/zaphoyd/websocketpp), [asio](https://github.com/chriskohlhoff/asio) and [nlohmann/json](https://github.com/nlohmann/json). These 3 libraries will be fetched by CMake during configuration step.
 
