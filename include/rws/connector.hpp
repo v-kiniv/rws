@@ -59,12 +59,35 @@ public:
 
     auto matching_subscriber = get_subscriber_by_params(params);
     subscriber_handle handle = {nullptr, params, handler, client_id, next_handler_id_++, rclcpp::Time(0, 0, RCL_ROS_TIME)};
+
     rclcpp::QoS qos(params.history_depth);
-    auto info = node_->get_publishers_info_by_topic(params.topic);
-    for(const auto& node : info)
-    {
-      qos.durability(node.qos_profile().get_rmw_qos_profile().durability);
+    auto publishers_info = node_->get_publishers_info_by_topic(params.topic);
+
+    if (publishers_info.empty()) {
+      // No publishers yet: use the same broadly compatible fallback as rosbridge.
+      qos.reliability(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT);
+      qos.durability(RMW_QOS_POLICY_DURABILITY_VOLATILE);
+    } else {
+      bool all_reliable = true;
+      bool all_transient_local = true;
+
+      for (const auto & publisher_info : publishers_info) {
+        const auto rmw_qos =
+          publisher_info.qos_profile().get_rmw_qos_profile();
+
+        if (rmw_qos.reliability != RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
+          all_reliable = false;
+        }
+
+        if (rmw_qos.durability != RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
+          all_transient_local = false;
+        }
+      }
+
+      qos.reliability(all_reliable ? RMW_QOS_POLICY_RELIABILITY_RELIABLE : RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT);
+      qos.durability(all_transient_local ? RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL : RMW_QOS_POLICY_DURABILITY_VOLATILE);
     }
+
     bool is_transient_local = qos.durability() == rclcpp::DurabilityPolicy::TransientLocal;
 
     if (matching_subscriber == nullptr || is_transient_local) {
