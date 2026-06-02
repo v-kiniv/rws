@@ -1,3 +1,5 @@
+#ifndef NODE_MOCK_H__
+#define NODE_MOCK_H__
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -52,3 +54,5 @@ public:
     (const std::string & topic_name, bool no_mangle), (const));
   MOCK_METHOD(std::vector<std::string>, get_node_names, (), (const));
 };
+
+#endif // NODE_MOCK_H__

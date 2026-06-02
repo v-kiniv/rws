@@ -3,6 +3,12 @@
 
 #include "node_mock.hpp"
 
+#define EXPECT_QOS(qos, expected_reliability, expected_durability) \
+  do { \
+    EXPECT_EQ((qos).reliability(), (expected_reliability)); \
+    EXPECT_EQ((qos).durability(), (expected_durability)); \
+  } while (false)
+
 namespace rws
 {
 
@@ -12,6 +18,18 @@ using testing::MockFunction;
 using testing::Return;
 
 using ConstSharedMessage = std::shared_ptr<const rclcpp::SerializedMessage>;
+
+static rclcpp::TopicEndpointInfo make_publisher_info(const rclcpp::QoS &qos)
+{
+  rcl_topic_endpoint_info_t info{};
+  info.node_name = "test_publisher";
+  info.node_namespace = "/";
+  info.topic_type = "std_msgs/msg/String";
+  info.endpoint_type = RMW_ENDPOINT_PUBLISHER;
+  info.qos_profile = qos.get_rmw_qos_profile();
+
+  return rclcpp::TopicEndpointInfo(info);
+}
 
 class ConnectorFixture : public testing::Test
 {
@@ -44,7 +62,7 @@ TEST_F(ConnectorFixture, subscribe_to_topic_calls_create_generic_subscription_wi
   EXPECT_EQ(params.compression, "none");
 
   EXPECT_CALL(
-    *node, create_generic_subscription("/topic", "std_msgs/msg/String", rclcpp::QoS(10), _, _))
+    *node, create_generic_subscription("/topic", "std_msgs/msg/String", _, _, _))
     .Times(1)
     .WillRepeatedly(Return(nullptr));
 
@@ -81,7 +99,7 @@ TEST_F(
 
   std::function<void(ConstSharedMessage)> topic_callback;
   EXPECT_CALL(
-    *node, create_generic_subscription("/topic", "std_msgs/msg/String", rclcpp::QoS(10), _, _))
+    *node, create_generic_subscription("/topic", "std_msgs/msg/String", _, _, _))
     .Times(1)
     .WillRepeatedly(
       Invoke([&topic_callback](
@@ -129,7 +147,7 @@ TEST_F(
 
   std::function<void(ConstSharedMessage)> topic0_callback;
   EXPECT_CALL(
-    *node, create_generic_subscription("/topic0", "std_msgs/msg/String", rclcpp::QoS(10), _, _))
+    *node, create_generic_subscription("/topic0", "std_msgs/msg/String", _, _, _))
     .Times(1)
     .WillRepeatedly(
       Invoke([&topic0_callback](
@@ -142,7 +160,7 @@ TEST_F(
 
   std::function<void(ConstSharedMessage)> topic1_callback;
   EXPECT_CALL(
-    *node, create_generic_subscription("/topic1", "std_msgs/msg/String", rclcpp::QoS(10), _, _))
+    *node, create_generic_subscription("/topic1", "std_msgs/msg/String", _, _, _))
     .Times(1)
     .WillRepeatedly(
       Invoke([&topic1_callback](
@@ -323,7 +341,7 @@ TEST_F(ConnectorFixture, subscription_callback_throttles_messages)
 
   std::function<void(ConstSharedMessage)> topic_callback;
   EXPECT_CALL(
-    *node, create_generic_subscription("/test_topic", "std_msgs/msg/String", rclcpp::QoS(10), _, _))
+    *node, create_generic_subscription("/test_topic", "std_msgs/msg/String", _, _, _))
     .Times(1)
     .WillRepeatedly(
       Invoke([&topic_callback](
@@ -355,6 +373,200 @@ TEST_F(ConnectorFixture, subscription_callback_throttles_messages)
   EXPECT_EQ(client_msgs.size(), 2);
   EXPECT_EQ(client_msgs[0], messages[0]);
   EXPECT_EQ(client_msgs[1], messages[3]);
+}
+
+TEST_F(
+  ConnectorFixture,
+  subscribe_to_topic_uses_best_effort_when_publisher_is_best_effort)
+{
+  auto node = std::make_shared<NodeMock>();
+  Connector<GenericPublisherMock> connector(node);
+
+  topic_params params("/topic", "std_msgs/msg/String");
+
+  const auto publisher_info =
+    make_publisher_info(rclcpp::QoS(10).best_effort());
+
+  EXPECT_CALL(*node, get_publishers_info_by_topic("/topic", false))
+    .Times(1)
+    .WillOnce(Return(std::vector<rclcpp::TopicEndpointInfo>{publisher_info}));
+
+  EXPECT_CALL(
+    *node,
+    create_generic_subscription("/topic", "std_msgs/msg/String", _, _, _))
+    .Times(1)
+    .WillOnce(Invoke(
+      [](const std::string &,
+         const std::string &,
+         const rclcpp::QoS & qos,
+         std::function<void(std::shared_ptr<rclcpp::SerializedMessage>)>,
+         const rclcpp::SubscriptionOptions &) {
+        EXPECT_QOS(
+          qos,
+          rclcpp::ReliabilityPolicy::BestEffort,
+          rclcpp::DurabilityPolicy::Volatile);
+        return nullptr;
+      }));
+
+  auto handler = [](topic_params, ConstSharedMessage) {};
+  connector.subscribe_to_topic(0, params, handler);
+}
+
+TEST_F(
+  ConnectorFixture,
+  subscribe_to_topic_uses_reliable_when_all_publishers_are_reliable)
+{
+  auto node = std::make_shared<NodeMock>();
+  Connector<GenericPublisherMock> connector(node);
+
+  topic_params params("/topic", "std_msgs/msg/String");
+
+  const auto publisher_info =
+    make_publisher_info(rclcpp::QoS(10).reliable());
+
+  EXPECT_CALL(*node, get_publishers_info_by_topic("/topic", false))
+    .Times(1)
+    .WillOnce(Return(std::vector<rclcpp::TopicEndpointInfo>{publisher_info}));
+
+  EXPECT_CALL(
+    *node,
+    create_generic_subscription("/topic", "std_msgs/msg/String", _, _, _))
+    .Times(1)
+    .WillOnce(Invoke(
+      [](const std::string &,
+         const std::string &,
+         const rclcpp::QoS & qos,
+         std::function<void(std::shared_ptr<rclcpp::SerializedMessage>)>,
+         const rclcpp::SubscriptionOptions &) {
+        EXPECT_QOS(
+          qos,
+          rclcpp::ReliabilityPolicy::Reliable,
+          rclcpp::DurabilityPolicy::Volatile);
+        return nullptr;
+      }));
+
+  auto handler = [](topic_params, ConstSharedMessage) {};
+  connector.subscribe_to_topic(0, params, handler);
+}
+
+TEST_F(
+  ConnectorFixture,
+  subscribe_to_topic_uses_best_effort_when_any_publisher_is_best_effort)
+{
+  auto node = std::make_shared<NodeMock>();
+  Connector<GenericPublisherMock> connector(node);
+
+  topic_params params("/topic", "std_msgs/msg/String");
+
+  const auto reliable_publisher =
+    make_publisher_info(rclcpp::QoS(10).reliable());
+
+  const auto best_effort_publisher =
+    make_publisher_info(rclcpp::QoS(10).best_effort());
+
+  EXPECT_CALL(*node, get_publishers_info_by_topic("/topic", false))
+    .Times(1)
+    .WillOnce(Return(std::vector<rclcpp::TopicEndpointInfo>{
+      reliable_publisher,
+      best_effort_publisher
+    }));
+
+  EXPECT_CALL(
+    *node,
+    create_generic_subscription("/topic", "std_msgs/msg/String", _, _, _))
+    .Times(1)
+    .WillOnce(Invoke(
+      [](const std::string &,
+         const std::string &,
+         const rclcpp::QoS & qos,
+         std::function<void(std::shared_ptr<rclcpp::SerializedMessage>)>,
+         const rclcpp::SubscriptionOptions &) {
+        EXPECT_QOS(
+          qos,
+          rclcpp::ReliabilityPolicy::BestEffort,
+          rclcpp::DurabilityPolicy::Volatile);
+        return nullptr;
+      }));
+
+  auto handler = [](topic_params, ConstSharedMessage) {};
+  connector.subscribe_to_topic(0, params, handler);
+}
+
+TEST_F(
+  ConnectorFixture,
+  subscribe_to_topic_uses_volatile_when_any_publisher_is_volatile)
+{
+  auto node = std::make_shared<NodeMock>();
+  Connector<GenericPublisherMock> connector(node);
+
+  topic_params params("/topic", "std_msgs/msg/String");
+
+  const auto transient_local_publisher =
+    make_publisher_info(rclcpp::QoS(10).transient_local());
+
+  const auto volatile_publisher =
+    make_publisher_info(rclcpp::QoS(10).durability_volatile());
+
+  EXPECT_CALL(*node, get_publishers_info_by_topic("/topic", false))
+    .Times(1)
+    .WillOnce(Return(std::vector<rclcpp::TopicEndpointInfo>{
+      transient_local_publisher,
+      volatile_publisher
+    }));
+
+  EXPECT_CALL(
+    *node,
+    create_generic_subscription("/topic", "std_msgs/msg/String", _, _, _))
+    .Times(1)
+    .WillOnce(Invoke(
+      [](const std::string &,
+         const std::string &,
+         const rclcpp::QoS & qos,
+         std::function<void(std::shared_ptr<rclcpp::SerializedMessage>)>,
+         const rclcpp::SubscriptionOptions &) {
+        EXPECT_QOS(
+          qos,
+          rclcpp::ReliabilityPolicy::Reliable,
+          rclcpp::DurabilityPolicy::Volatile);
+        return nullptr;
+      }));
+
+  auto handler = [](topic_params, ConstSharedMessage) {};
+  connector.subscribe_to_topic(0, params, handler);
+}
+
+TEST_F(
+  ConnectorFixture,
+  subscribe_to_topic_without_publishers_uses_best_effort_volatile_fallback)
+{
+  auto node = std::make_shared<NodeMock>();
+  Connector<GenericPublisherMock> connector(node);
+
+  topic_params params("/topic", "std_msgs/msg/String");
+
+  EXPECT_CALL(*node, get_publishers_info_by_topic("/topic", false))
+    .Times(1)
+    .WillOnce(Return(std::vector<rclcpp::TopicEndpointInfo>{}));
+
+  EXPECT_CALL(
+    *node,
+    create_generic_subscription("/topic", "std_msgs/msg/String", _, _, _))
+    .Times(1)
+    .WillOnce(Invoke(
+      [](const std::string &,
+         const std::string &,
+         const rclcpp::QoS & qos,
+         std::function<void(std::shared_ptr<rclcpp::SerializedMessage>)>,
+         const rclcpp::SubscriptionOptions &) {
+        EXPECT_QOS(
+          qos,
+          rclcpp::ReliabilityPolicy::BestEffort,
+          rclcpp::DurabilityPolicy::Volatile);
+        return nullptr;
+      }));
+
+  auto handler = [](topic_params, ConstSharedMessage) {};
+  connector.subscribe_to_topic(0, params, handler);
 }
 
 }  // namespace rws

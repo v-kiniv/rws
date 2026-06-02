@@ -127,6 +127,126 @@ TEST_F(ClientHandlerFixture, rosapi_topic_and_raw_types_is_thread_safe)
   EXPECT_NE(server_node, nullptr);
 }
 
+TEST_F(
+  ClientHandlerFixture,
+  subscribe_to_nonexistent_topic_succeeds_when_type_is_given)
+{
+  auto server_node = std::make_shared<rclcpp::Node>("server_node");
+  auto node_interface = std::make_shared<NodeInterfaceImpl>(server_node);
+  auto connector = std::make_shared<Connector<>>(node_interface);
+
+  ClientHandler handler(
+    0,
+    node_interface,
+    connector,
+    true,
+    [](std::string &) {},
+    [](std::vector<uint8_t> &) {});
+
+  auto json_o = json::parse(R"(
+    {
+      "id": "sub1",
+      "op": "subscribe",
+      "topic": "/topic_that_does_not_exist_yet",
+      "type": "std_msgs/msg/String"
+    }
+  )");
+
+  auto response = handler.process_message(json_o);
+
+  EXPECT_EQ(response["op"], "subscribe_response");
+  EXPECT_EQ(response["result"], true);
+  EXPECT_EQ(response["type"], "std_msgs/msg/String");
+}
+
+TEST_F(
+  ClientHandlerFixture,
+  subscribe_to_nonexistent_topic_fails_when_type_is_not_given)
+{
+  auto server_node = std::make_shared<rclcpp::Node>("server_node");
+  auto node_interface = std::make_shared<NodeInterfaceImpl>(server_node);
+  auto connector = std::make_shared<Connector<>>(node_interface);
+
+  ClientHandler handler(
+    0,
+    node_interface,
+    connector,
+    true,
+    [](std::string &) {},
+    [](std::vector<uint8_t> &) {});
+
+  auto json_o = json::parse(R"(
+    {
+      "id": "sub1",
+      "op": "subscribe",
+      "topic": "/topic_that_does_not_exist_yet"
+    }
+  )");
+
+  auto response = handler.process_message(json_o);
+
+  EXPECT_EQ(response["op"], "subscribe_response");
+  EXPECT_EQ(response["result"], false);
+  EXPECT_TRUE(response.contains("error"));
+}
+
+TEST_F(
+  ClientHandlerFixture,
+  subscribe_to_nonexistent_topic_normalizes_rosbridge_style_type)
+{
+  auto server_node = std::make_shared<rclcpp::Node>("server_node");
+  auto node_interface = std::make_shared<NodeInterfaceImpl>(server_node);
+  auto connector = std::make_shared<Connector<>>(node_interface);
+
+  ClientHandler handler( 0, node_interface, connector, true, [](std::string &) {}, [](std::vector<uint8_t> &) {});
+
+  auto json_o = json::parse(R"(
+    {
+      "id": "sub1",
+      "op": "subscribe",
+      "topic": "/topic_that_does_not_exist_yet",
+      "type": "std_msgs/String"
+    }
+  )");
+
+  auto response = handler.process_message(json_o);
+
+  EXPECT_EQ(response["op"], "subscribe_response");
+  EXPECT_EQ(response["result"], true);
+  EXPECT_EQ(response["type"], "std_msgs/msg/String");
+}
+
+TEST_F(
+  ClientHandlerFixture,
+  subscribe_to_existing_topic_fails_when_explicit_type_does_not_match)
+{
+  auto server_node = std::make_shared<rclcpp::Node>("server_node");
+  auto node_interface = std::make_shared<NodeInterfaceImpl>(server_node);
+  auto connector = std::make_shared<Connector<>>(node_interface);
+
+  auto publisher = server_node->create_generic_publisher("/existing_topic", "test_msgs/msg/BasicTypes", rclcpp::QoS(10));
+
+  ClientHandler handler(0, node_interface, connector, true, [](std::string &) {}, [](std::vector<uint8_t> &) {});
+
+  auto json_o = json::parse(R"(
+    {
+      "id": "sub1",
+      "op": "subscribe",
+      "topic": "/existing_topic",
+      "type": "test_msgs/msg/Strings"
+    }
+  )");
+
+  auto response = handler.process_message(json_o);
+
+  EXPECT_EQ(response["op"], "subscribe_response");
+  EXPECT_EQ(response["id"], "sub1");
+  EXPECT_EQ(response["result"], false);
+  EXPECT_TRUE(response.contains("error"));
+
+  EXPECT_NE(publisher, nullptr);
+}
+
 }  // namespace rws
 
 int main(int argc, char ** argv)
